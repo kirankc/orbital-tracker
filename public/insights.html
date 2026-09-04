@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbital Tracker — insights</title>
+<link rel="icon" type="image/svg+xml" href="img/logo.svg">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body class="page">
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="logo" src="img/logo.svg" alt=""><span class="wordmark"><span class="w1">ORBITAL</span><span class="w2">TRACKER</span></span></a>
+  <nav>
+    <a href="index.html"><span class="ni">🌐</span>Globe</a>
+    <a href="launches.html"><span class="ni">🚀</span>Launches</a>
+    <a class="active" href="insights.html"><span class="ni">📊</span>Insights</a>
+    <a href="detail.html?type=rockets"><span class="ni">🛰</span>Rockets</a>
+    <a href="detail.html?type=makers"><span class="ni">🏭</span>Manufacturers</a>
+    <a href="detail.html?type=owners"><span class="ni">📡</span>Operators</a>
+    <a href="detail.html?type=buses"><span class="ni">📦</span>Buses</a>
+    <a href="detail.html?type=untracked"><span class="ni">👻</span>Untracked</a>
+  </nav>
+  <div class="spacer"></div>
+  <span class="status-pill" id="src"></span>
+  <span class="clock" id="clock"></span>
+</header>
+<main class="wrap viz-root" id="main">
+  <div class="viz-head">
+    <div>
+      <h1 style="font-size:26px;margin-bottom:6px">Insights</h1>
+      <p class="muted" style="margin:0">Who owns the sky, where everything flies, and how fast it is getting there. Every bar and cell is a click-through to the globe or a profile page.</p>
+    </div>
+    <label class="toggle" title="SpaceX's Starlink is ~60% of everything in orbit; hide it to see the rest of the picture"><input type="checkbox" id="hide-starlink"> Hide Starlink</label>
+  </div>
+  <div class="hero-tiles" id="hero"></div>
+  <div class="viz-grid" id="charts"><div class="loading" style="position:static;background:transparent;padding:60px 0;grid-column:1/-1"><div class="spinner"></div><div>Crunching the catalog…</div></div></div>
+</main>
+<div class="viz-tip" id="tip" hidden></div>
+<script type="module" src="js/insights.js"></script>
+</body>
+</html>

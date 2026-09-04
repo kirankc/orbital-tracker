@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbital Tracker — live LEO / GEO satellites</title>
+<link rel="icon" type="image/svg+xml" href="img/logo.svg">
+<link rel="stylesheet" href="css/app.css">
+<script type="importmap">
+{ "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/", "satellite.js": "/vendor/satellite.js/index.js" } }
+</script>
+</head>
+<body class="globe-page">
+<div class="loading" id="loading"><div class="spinner"></div><div id="loadmsg">Loading orbital elements…</div></div>
+<div id="globe"></div>
+
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="logo" src="img/logo.svg" alt=""><span class="wordmark"><span class="w1">ORBITAL</span><span class="w2">TRACKER</span></span></a>
+  <nav>
+    <a class="active" href="index.html"><span class="ni">🌐</span>Globe</a>
+    <a href="launches.html"><span class="ni">🚀</span>Launches</a>
+    <a href="insights.html"><span class="ni">📊</span>Insights</a>
+    <a href="detail.html?type=rockets"><span class="ni">🛰</span>Rockets</a>
+    <a href="detail.html?type=makers"><span class="ni">🏭</span>Manufacturers</a>
+    <a href="detail.html?type=owners"><span class="ni">📡</span>Operators</a>
+    <a href="detail.html?type=buses"><span class="ni">📦</span>Buses</a>
+    <a href="detail.html?type=untracked"><span class="ni">👻</span>Untracked</a>
+  </nav>
+  <div class="spacer"></div>
+  <span class="status-pill live" id="datapill">CelesTrak GP · —</span>
+  <span class="clock" id="clock"></span>
+</header>
+
+<aside class="side left">
+  <div class="hd"><h2>Catalog</h2><span class="small muted" id="visible-count"></span></div>
+  <div class="bd">
+    <div class="stats" id="stats">
+      <div class="stat leo" data-orbit="LEO"><div class="n" id="n-leo">–</div><div class="l">LEO</div></div>
+      <div class="stat meo" data-orbit="MEO"><div class="n" id="n-meo">–</div><div class="l">MEO</div></div>
+      <div class="stat geo" data-orbit="GEO"><div class="n" id="n-geo">–</div><div class="l">GEO</div></div>
+      <div class="stat heo" data-orbit="HEO"><div class="n" id="n-heo">–</div><div class="l">HEO</div></div>
+      <div class="stat mil" id="stat-mil"><div class="n" id="n-mil">–</div><div class="l">Military</div></div>
+    </div>
+    <div class="filters">
+      <input class="search" id="search" type="search" placeholder="Search name, NORAD ID or COSPAR (e.g. ISS, 25544, 1998-067A)">
+      <div class="chips" id="orbit-chips">
+        <button class="chip leo on" data-orbit="LEO">LEO</button>
+        <button class="chip meo on" data-orbit="MEO">MEO</button>
+        <button class="chip geo on" data-orbit="GEO">GEO</button>
+        <button class="chip heo on" data-orbit="HEO">HEO</button>
+        <button class="chip other on" data-orbit="OTHER">Other</button>
+      </div>
+      <div class="row">
+        <label class="toggle mil"><input type="checkbox" id="mil-only"> Defense / military only</label>
+        <label class="toggle mil"><input type="checkbox" id="mil-highlight" checked> Highlight military</label>
+      </div>
+      <div class="row">
+        <select class="sel" id="country"><option value="">All countries</option></select>
+        <select class="sel" id="objtype"><option value="">Payloads + rocket bodies</option><option value="PAY" selected>Payloads only</option><option value="R/B">Rocket bodies only</option></select>
+      </div>
+      <div class="row">
+        <select class="sel" id="owner"><option value="">All operators</option></select>
+        <select class="sel" id="rocket"><option value="">All launch vehicles</option></select>
+      </div>
+      <div class="legend"><span style="--c:#4cc9f0">LEO</span><span style="--c:#80ed99">MEO</span><span style="--c:#ffb703">GEO</span><span style="--c:#c77dff">HEO</span><span style="--c:#ff4d6d">Military</span><span style="--c:#ffffff">Selected</span></div>
+    </div>
+    <div class="coverage" id="coverage"></div>
+    <div class="list-hd"><span id="list-count"></span><span>Click a row to locate on the globe</span></div>
+    <div class="satlist" id="satlist"></div>
+    <button class="more" id="more" hidden>Show more</button>
+  </div>
+</aside>
+
+<aside class="side right" id="detail-panel">
+  <div class="hd"><h2>Satellite</h2><button class="iconbtn" id="close-detail" title="Close">✕</button></div>
+  <div class="bd detail" id="detail"></div>
+</aside>
+
+<div class="controls">
+  <button id="btn-now" class="on" title="Real time">Live</button>
+  <button data-speed="10">×10</button>
+  <button data-speed="60">×60</button>
+  <button data-speed="600">×600</button>
+  <button data-speed="0" title="Pause">❚❚</button>
+  <span class="sep"></span>
+  <span class="t" id="simtime"></span>
+  <span class="sep"></span>
+  <button id="view-leo" title="Zoom to low orbit">LEO view</button>
+  <button id="view-geo" title="Zoom out to the geostationary belt">GEO view</button>
+  <button id="autorotate" title="Auto-rotate">⟳</button>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+<div class="sel-label" id="sel-label"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

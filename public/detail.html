@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbital Tracker — profile</title>
+<link rel="icon" type="image/svg+xml" href="img/logo.svg">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body class="page">
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="logo" src="img/logo.svg" alt=""><span class="wordmark"><span class="w1">ORBITAL</span><span class="w2">TRACKER</span></span></a>
+  <nav>
+    <a href="index.html"><span class="ni">🌐</span>Globe</a>
+    <a href="launches.html"><span class="ni">🚀</span>Launches</a>
+    <a href="insights.html"><span class="ni">📊</span>Insights</a>
+    <a href="detail.html?type=rockets" data-nav="rockets"><span class="ni">🛰</span>Rockets</a>
+    <a href="detail.html?type=makers" data-nav="makers"><span class="ni">🏭</span>Manufacturers</a>
+    <a href="detail.html?type=owners" data-nav="owners"><span class="ni">📡</span>Operators</a>
+    <a href="detail.html?type=buses" data-nav="buses"><span class="ni">📦</span>Buses</a>
+    <a href="detail.html?type=untracked" data-nav="untracked"><span class="ni">👻</span>Untracked</a>
+  </nav>
+  <div class="spacer"></div>
+  <span class="clock" id="clock"></span>
+</header>
+<main class="wrap" id="main"><div class="loading" style="position:static;background:transparent;padding:60px 0"><div class="spinner"></div><div>Gathering details…</div></div></main>
+<script type="module" src="js/detail.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbital Tracker — upcoming launches</title>
+<link rel="icon" type="image/svg+xml" href="img/logo.svg">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body class="page">
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="logo" src="img/logo.svg" alt=""><span class="wordmark"><span class="w1">ORBITAL</span><span class="w2">TRACKER</span></span></a>
+  <nav>
+    <a href="index.html"><span class="ni">🌐</span>Globe</a>
+    <a class="active" href="launches.html"><span class="ni">🚀</span>Launches</a>
+    <a href="insights.html"><span class="ni">📊</span>Insights</a>
+    <a href="detail.html?type=rockets"><span class="ni">🛰</span>Rockets</a>
+    <a href="detail.html?type=makers"><span class="ni">🏭</span>Manufacturers</a>
+    <a href="detail.html?type=owners"><span class="ni">📡</span>Operators</a>
+    <a href="detail.html?type=buses"><span class="ni">📦</span>Buses</a>
+    <a href="detail.html?type=untracked"><span class="ni">👻</span>Untracked</a>
+  </nav>
+  <div class="spacer"></div>
+  <span class="status-pill" id="src"></span>
+  <span class="clock" id="clock"></span>
+</header>
+<main class="wrap">
+  <div class="view-switch" id="view-switch"><button data-view="upcoming" class="on">Upcoming</button><button data-view="recent">Recent</button></div>
+  <h1 style="font-size:26px;margin-bottom:6px" id="page-title">Upcoming rocket launches worldwide</h1>
+  <p class="muted" style="margin:0 0 16px" id="page-sub">Schedule from The Space Devs Launch Library. Times are shown in your local time zone with UTC alongside. Click a rocket or provider for its full profile.</p>
+  <div class="summary-row" id="summary"></div>
+  <div class="launch-filters">
+    <input class="search" id="q" type="search" placeholder="Search mission, rocket, provider, pad…">
+    <select class="sel" id="f-provider"><option value="">All providers</option></select>
+    <select class="sel" id="f-country"><option value="">All launch countries</option></select>
+    <select class="sel" id="f-status"><option value="">All statuses</option></select>
+    <select class="sel" id="f-rocket"><option value="">All rockets</option></select>
+    <label class="toggle"><input type="checkbox" id="f-mil"> Defense / military missions</label>
+  </div>
+  <div id="list"><div class="loading" style="position:static;background:transparent;padding:60px 0"><div class="spinner"></div><div>Loading launch schedule…</div></div></div>
+</main>
+<script type="module" src="js/launches.js"></script>
+</body>
+</html>
