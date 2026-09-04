@@ -1,4 +1,4 @@
-import { esc, fmtDate, fmtNum, linkRocket, linkMaker, linkBus, satTable, newsList, socialLinks, startClock, qs, launchUrl, rocketUrl, makerUrl, busUrl, countdown } from './common.js';
+import { esc, fmtDate, fmtNum, linkRocket, linkMaker, linkBus, satTable, newsList, socialLinks, startClock, qs, launchUrl, rocketUrl, makerUrl, busUrl, countdown, apiGet, STATIC, slugFile } from './common.js';
 
 startClock(document.getElementById('clock'));
 const main = document.getElementById('main');
@@ -15,6 +15,7 @@ function isoDur(d) {
 }
 const spec = (l, v, unit = '') => (v === null || v === undefined || v === '' || v === 0 ? '' : `<div class="spec"><div class="l">${l}</div><div class="v">${v}${unit ? `<small>${unit}</small>` : ''}</div></div>`);
 const card = (title, body, extra = '') => `<div class="card"><h2>${title}</h2>${body}${extra}</div>`;
+const pendingNote = (d) => d.pending ? '<div class="note" style="margin-bottom:12px"><span class="spinner" style="display:inline-block;width:12px;height:12px;border-width:2px;vertical-align:middle;margin-right:6px"></span>Fetching Launch Library, Wikipedia and news…</div>' : '';
 const prose = (text, id) => text ? `<div class="prose" id="${id}">${esc(text)}</div><button class="expand" data-expand="${id}">Read more</button>` : '';
 const upcomingList = (items) => items?.length ? items.map((l) => `<a class="launch-mini" href="${launchUrl(l.id)}">${l.image ? `<img src="${esc(l.image)}" alt="" onerror="this.remove()">` : '<div></div>'}<div><div class="t">${esc(l.name)}</div><div class="m">${fmtDate(l.net, { time: true })} · ${esc(l.status || '')}</div><div class="m">${esc(l.provider || '')}${l.location ? ' · ' + esc(l.location) : ''}</div></div></a>`).join('') : '<div class="empty">No launches in the current upcoming window.</div>';
 const pastList = (items) => items?.length ? items.map((l) => `<a class="launch-mini" href="https://spacelaunchnow.me/launch/${esc(l.id)}" target="_blank" rel="noopener">${l.image ? `<img src="${esc(l.image)}" alt="" onerror="this.remove()">` : '<div></div>'}<div><div class="t">${esc(l.name)}</div><div class="m">${fmtDate(l.net, { time: true })} · ${esc(l.status || '')}</div><div class="m">${esc(l.provider || '')}${l.location ? ' · ' + esc(l.location) : ''}</div></div></a>`).join('') : '<div class="empty">No launch history available.</div>';
@@ -22,6 +23,33 @@ const pastList = (items) => items?.length ? items.map((l) => `<a class="launch-m
 function wireExpand() { main.querySelectorAll('[data-expand]').forEach((b) => { const p = document.getElementById(b.dataset.expand); if (p.scrollHeight <= 330) { p.classList.add('open'); b.remove(); return; } b.onclick = () => { p.classList.toggle('open'); b.textContent = p.classList.contains('open') ? 'Show less' : 'Read more'; }; }); }
 
 async function getJSON(url) { const r = await fetch(url); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`); return r.json(); }
+
+// Profile loading. Server mode: one API call. Static mode: GCAT core JSON rendered immediately, then enriched in the
+// browser (Launch Library, Wikipedia, news) and re-rendered.
+async function loadProfile(type, params, render) {
+  if (!STATIC) { render(await getJSON(`/api/${type}?${new URLSearchParams(params)}`)); return; }
+  const enrich = await import('./enrich.js');
+  const upcoming = apiGet('/api/launches/upcoming').then((d) => d.results).catch(() => []);
+  let core;
+  if (type === 'rocket') {
+    const rockets = await apiGet('/api/rockets');
+    const resolved = enrich.resolveRocket(params.name, rockets);
+    core = resolved ? { ...(await getJSON(`${STATIC}profiles/rocket/${slugFile(resolved)}.json`)), requestedName: params.name } : { name: params.name, requestedName: params.name, searchName: enrich.llRocketSearchName(params.name), gcat: null, lvVariants: [], satellites: [], satelliteCount: 0, history: null, familyHistory: [] };
+    render({ ...core, ll2: null, news: [], upcoming: [], ll2Launches: [], links: [], pending: true });
+    render(await enrich.enrichRocket(core, await upcoming));
+  } else if (type === 'maker') {
+    let code = params.code;
+    if (!code && params.name) { const idx = await getJSON(`${STATIC}profiles/maker-index.json`).catch(() => ({})); code = idx[params.name.toLowerCase()] || null; }
+    core = code ? await getJSON(`${STATIC}profiles/maker/${slugFile(code)}.json`).catch(() => null) : null;
+    if (!core) core = { code: null, name: params.name, shortName: params.name, candidates: [params.name], org: null, builtCount: 0, operatedCount: 0, buses: [], satellites: [], satelliteCount: 0, rockets: [] };
+    render({ ...core, ll2: null, news: [], upcoming: [], links: [], pending: true });
+    render(await enrich.enrichMaker(core, await upcoming));
+  } else if (type === 'bus') {
+    core = await getJSON(`${STATIC}profiles/bus/${slugFile(params.name)}.json`);
+    render({ ...core, news: [], wikiSearch: [], pending: true });
+    render(await enrich.enrichBus(core));
+  }
+}
 
 function ll2Socials(agency) {
   if (!agency) return [];
@@ -34,7 +62,7 @@ function ll2Socials(agency) {
 
 // ---------------------------------------------------------------------------
 async function renderRocket(name) {
-  const d = await getJSON(`/api/rocket?name=${encodeURIComponent(name)}`);
+  await loadProfile('rocket', { name }, (d) => {
   document.title = `${d.name} — rocket profile`;
   const ll = d.ll2;
   const mf = ll?.manufacturer || ll?.families?.[0]?.manufacturer?.[0] || null;
@@ -64,7 +92,7 @@ async function renderRocket(name) {
   const socials = [...ll2Socials(mf), ...(d.links || [])];
   const stats = d.gcat ? `<div class="specs">${spec('Objects in orbit from this rocket', fmtNum(d.satelliteCount))}${spec('Of which defense / military', fmtNum(d.gcat.mil))}${spec('Earliest tracked launch', d.gcat.first ? fmtDate(d.gcat.first) : null)}${spec('Latest tracked launch', d.gcat.last ? fmtDate(d.gcat.last) : null)}</div>` : '';
 
-  main.innerHTML = hero + `<div class="grid"><div>
+  main.innerHTML = pendingNote(d) + hero + `<div class="grid"><div>
     ${card('Specifications', specs)}
     ${d.history ? card('Launch history (GCAT launch list)', `<div class="specs">${spec('Launches recorded', fmtNum(d.history.total))}${spec('Orbital attempts', fmtNum(d.history.orbital))}${spec('Orbital successes', fmtNum(d.history.success))}${spec('Orbital failures', fmtNum(d.history.failure))}${spec('Success rate', d.history.orbital ? Math.round(100 * d.history.success / d.history.orbital) + '%' : null)}${spec('First launch', d.history.first ? fmtDate(d.history.first) : null)}${spec('Latest launch', d.history.last ? fmtDate(d.history.last) : null)}</div>${d.familyHistory?.length ? `<div class="note" style="margin-top:10px">Other vehicles in this family: ${d.familyHistory.map((f) => `${linkRocket(f.name)} <span class="muted">(${fmtNum(f.total)} launches${f.last ? ', last ' + fmtDate(f.last) : ''})</span>`).join(' · ')}</div>` : ''}`) : ''}
     ${card('Variants (GCAT vehicle table)', variants)}
@@ -80,11 +108,12 @@ async function renderRocket(name) {
     ${d.errors?.length ? card('Data notes', `<div class="note">${d.errors.map(esc).join('<br>')}</div>`) : ''}
   </div></div>`;
   wireExpand();
+  });
 }
 
 // ---------------------------------------------------------------------------
 async function renderMaker(code, name) {
-  const d = await getJSON(`/api/maker?${code ? 'code=' + encodeURIComponent(code) : ''}${name ? '&name=' + encodeURIComponent(name) : ''}`);
+  await loadProfile('maker', { ...(code ? { code } : {}), ...(name ? { name } : {}) }, (d) => {
   document.title = `${d.name} — organisation profile`;
   const ll = d.ll2;
   const img = ll?.image?.image_url || d.wiki?.image || d.wiki?.thumbnail || ll?.logo?.image_url;
@@ -109,7 +138,7 @@ async function renderMaker(code, name) {
   const buses = d.buses?.length ? `<div class="linkrow">${d.buses.map((b) => `<a href="${busUrl(b.name)}">${esc(b.name)} <span class="muted">×${b.count}</span></a>`).join('')}</div>` : '';
   const socials = [...ll2Socials(ll), ...(d.links || [])];
 
-  main.innerHTML = hero + `<div class="grid"><div>
+  main.innerHTML = pendingNote(d) + hero + `<div class="grid"><div>
     ${card('At a glance', facts)}
     ${rockets ? card('Launch vehicles built', rockets) : ''}
     ${buses ? card('Satellite buses / models built', buses) : ''}
@@ -123,11 +152,12 @@ async function renderMaker(code, name) {
     ${d.errors?.length ? card('Data notes', `<div class="note">${d.errors.map(esc).join('<br>')}</div>`) : ''}
   </div></div>`;
   wireExpand();
+  });
 }
 
 // ---------------------------------------------------------------------------
 async function renderBus(name) {
-  const d = await getJSON(`/api/bus?name=${encodeURIComponent(name)}`);
+  await loadProfile('bus', { name }, (d) => {
   document.title = `${d.name} — satellite bus profile`;
   const img = d.wiki?.image || d.wiki?.thumbnail;
   const hero = `<div class="hero">${img ? `<img class="img" src="${esc(img)}" alt="${esc(d.name)}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'img'}))">` : '<div class="img"></div>'}<div>
@@ -138,7 +168,7 @@ async function renderBus(name) {
     <div class="linkrow" style="margin-top:10px">${d.wiki?.url ? `<a href="${esc(d.wiki.url)}" target="_blank" rel="noopener">Wikipedia ↗</a>` : ''}<a href="https://www.google.com/search?q=${encodeURIComponent(`"${d.name}" satellite bus`)}" target="_blank" rel="noopener">Web search ↗</a></div>
   </div></div>`;
   const facts = `<div class="specs">${spec('Objects in orbit', fmtNum(d.count))}${spec('Defense / military', fmtNum(d.mil))}${spec('First tracked launch', d.firstLaunch ? fmtDate(d.firstLaunch) : null)}${spec('Latest tracked launch', d.lastLaunch ? fmtDate(d.lastLaunch) : null)}${Object.entries(d.orbits).map(([k, v]) => spec(`In ${k}`, fmtNum(v))).join('')}</div>`;
-  main.innerHTML = hero + `<div class="grid"><div>
+  main.innerHTML = pendingNote(d) + hero + `<div class="grid"><div>
     ${card('At a glance', facts)}
     ${d.wikiExtract ? card('Background (Wikipedia)', prose(d.wikiExtract, 'wx'), `<div class="note" style="margin-top:8px">Source: <a href="${esc(d.wiki?.url || '#')}" target="_blank" rel="noopener">Wikipedia</a>, CC BY-SA.</div>`) : ''}
     ${card(`Satellites using the ${esc(d.name)} bus (${d.count.toLocaleString()})`, satTable(d.satellites, { limit: 200, total: d.count }))}
@@ -148,13 +178,14 @@ async function renderBus(name) {
     ${d.wikiSearch?.length > 1 ? card('Other possible articles', `<div class="linkrow">${d.wikiSearch.slice(1).map((w) => `<a href="${esc(w.url)}" target="_blank" rel="noopener">${esc(w.title)}</a>`).join('')}</div>`) : ''}
   </div></div>`;
   wireExpand();
+  });
 }
 
 // ---------------------------------------------------------------------------
 async function renderIndex(kind) {
   const titles = { rockets: 'Launch vehicles', makers: 'Satellite manufacturers', owners: 'Satellite operators', buses: 'Satellite buses / models' };
   const subs = { rockets: 'Every vehicle with payloads currently in orbit, plus any vehicle that has attempted an orbital launch since 2015. Launch history from the GCAT launch list; objects in orbit from live CelesTrak elements.', makers: 'Organisations that built satellites currently in orbit.', owners: 'Organisations operating satellites currently in orbit.', buses: 'Spacecraft buses / platforms with objects currently in orbit.' };
-  const data = await getJSON(`/api/${kind}`);
+  const data = await apiGet(`/api/${kind}`);
   document.title = `${titles[kind]} — Orbital Tracker`;
   let rows;
   const pct = (r) => r.launches?.orbital ? Math.round((r.launches.success / r.launches.orbital) * 100) + '%' : '—';
@@ -167,7 +198,7 @@ async function renderIndex(kind) {
 }
 
 async function renderUntracked() {
-  const d = await getJSON('/api/untracked');
+  const d = await apiGet('/api/untracked');
   document.title = 'Active payloads without public elements — Orbital Tracker';
   const cv = d.coverage;
   const rows = d.objects.sort((a, b) => (b.launched || '').localeCompare(a.launched || ''));

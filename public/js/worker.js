@@ -1,5 +1,5 @@
 // SGP4 propagation worker: converts CelesTrak OMM elements into Earth-fixed positions for the globe.
-import { json2satrec, propagate, gstime, eciToEcf } from '/vendor/satellite.js/index.js';
+import { json2satrec, propagate, gstime, eciToEcf } from '../vendor/satellite.js/index.js';
 
 const R = 6371; // km per globe unit
 const OMEGA = 7.2921159e-5; // Earth rotation rad/s

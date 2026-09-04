@@ -76,6 +76,15 @@ app.get('/api/satellite/:id', ready, async (req, res) => {
 });
 
 // Indexes ---------------------------------------------------------------------
+// All details for objects whose NORAD id falls in shard*1000 .. shard*1000+999 (used by the static build).
+app.get('/api/details-shard/:shard', ready, (req, res) => {
+  const shard = parseInt(req.params.shard, 10);
+  const out = {};
+  for (const [id, d] of catalog.details) if (Math.floor(id / 1000) === shard) { const { gp, ...rest } = d; out[id] = rest; }
+  res.json(out);
+});
+app.get('/api/details-shards', ready, (req, res) => res.json([...new Set([...catalog.details.keys()].map((id) => Math.floor(id / 1000)))].sort((a, b) => a - b)));
+
 const noSats = ({ sats, ...r }) => r;
 app.get('/api/rockets', ready, (req, res) => res.json(catalog.rocketList.map(noSats)));
 app.get('/api/makers', ready, (req, res) => res.json(catalog.makerList.map(noSats)));
@@ -131,6 +140,16 @@ app.get('/api/rocket', ready, async (req, res) => {
   const mfCode = r?.manufacturerCode || lvVariants[0]?.manufacturerCode;
   const mfOrg = mfCode ? catalog.orgs.get(mfCode) : null;
   const searchName = ext.llRocketSearchName(name);
+  const core = {
+    name: resolvedName, requestedName: name, searchName,
+    history: catalog.lvStats.get(resolvedName) || null,
+    familyHistory: (() => { const fam = r?.family || lvVariants[0]?.family; if (!fam) return []; return [...catalog.lvs.values()].filter((l) => l.LV_Family === fam).map((l) => l.LV_Name).filter((n, i, a) => a.indexOf(n) === i && n !== resolvedName).map((n) => ({ name: n, ...(catalog.lvStats.get(n) || {}) })).filter((x) => x.total).sort((a, b) => (b.last || '').localeCompare(a.last || '')); })(),
+    gcat: r ? { ...noSats(r), manufacturerOrg: mfOrg ? { code: mfOrg.Code, name: mfOrg.EName !== '-' ? mfOrg.EName : mfOrg.Name, state: mfOrg.StateCode, location: mfOrg.Location } : null, variants: r.variants } : null,
+    lvVariants,
+    satellites: r ? satRows(r.sats).slice(0, 400) : [],
+    satelliteCount: r?.count || 0,
+  };
+  if (req.query.core === '1') return res.json(core);
   const [lc, wiki, newsR] = await settle([ext.launcherConfigs(name), ext.wikiSummary(searchName), ext.news(searchName)]);
   let ll2 = null;
   let ll2Launches = [];
@@ -213,6 +232,14 @@ app.get('/api/maker', ready, async (req, res) => {
   if (short && short.length >= 3) pushC(short);
   pushC(parentName);
   const RELEVANT = /space|aero|satellit|rocket|launch|defen|agency|compan|corporation|manufactur|research|institute|universit|air force|navy|army|ministry|military|telecom|communications|government|bureau|laborator|academy|observator|forces|consortium|operator|enterprise|design/i;
+  const built0 = maker ? satRows(maker.sats) : [];
+  const operated0 = owner ? satRows(owner.sats) : [];
+  const combine = (built, operated) => { const b = new Set(built.map((x) => x.id)), o = new Set(operated.map((x) => x.id)); return [...built, ...operated.filter((x) => !b.has(x.id))].map((x) => ({ ...x, role: b.has(x.id) && o.has(x.id) ? 'Built & operated' : b.has(x.id) ? 'Built' : 'Operated' })).sort((a, c) => (c.launched || '').localeCompare(a.launched || '') || a.name.localeCompare(c.name)); };
+  const orgOut = org ? { code: org.Code, name: display, shortName: short, localName: org.Name !== display ? org.Name : null, class: org.Class, classLabel: { A: 'Academic / research', B: 'Business / commercial', C: 'Civil government', D: 'Defense / military' }[org.Class] || org.Class, type: org.Type, state: org.StateCode, stateName: catalog.orgs.get(org.StateCode)?.ShortEName || org.StateCode, location: org.Location !== '-' ? org.Location : null, parent: org.Parent !== '-' ? org.Parent : null, parentName: catalog.orgs.get(org.Parent)?.EName || null, start: org.TStart !== '-' ? org.TStart : null, stop: org.TStop !== '-' ? org.TStop : null, lat: parseFloat(org.Latitude) || null, lon: parseFloat(org.Longitude) || null } : null;
+  if (req.query.core === '1') {
+    const combined0 = combine(built0, operated0);
+    return res.json({ code: org?.Code || null, name: display, shortName: short, searchName, candidates, org: orgOut, builtCount: maker?.count || 0, operatedCount: owner?.count || 0, buses: maker ? Object.entries(maker.buses).sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count })) : [], satellites: combined0.slice(0, 500), satelliteCount: combined0.length, rockets });
+  }
   const [agencies, newsR] = await settle([ext.agencySearch(short.length >= 3 ? short : searchName), ext.news(candidates[0] || searchName)]);
   let ll2 = agencies.ok && agencies.v.length ? agencies.v[0] : null;
   const llMatches = (a, n) => a && n && [a.name, a.abbrev].some((x) => x && (x.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(x.toLowerCase())));
@@ -294,6 +321,10 @@ app.get('/api/bus', ready, async (req, res) => {
   if (!b) return res.status(404).json({ error: 'unknown bus' });
   const mfName = Object.entries(b.manufacturers).sort((x, y) => y[1] - x[1])[0]?.[0];
   const q = /^(starlink|oneweb|kuiper|iridium|globalstar|orbcomm|planet|dove|flock|lemur)/i.test(name) ? name : `${name} satellite bus`;
+  if (req.query.core === '1') {
+    const sats0 = satRows(b.sats).slice(0, 400);
+    return res.json({ name, wikiQuery: q, count: b.count, mil: b.mil, manufacturers: Object.entries(b.manufacturers).sort((x, y) => y[1] - x[1]).map(([n, c]) => ({ name: n, count: c, code: catalog.list.find((s) => s.mf === n)?.mfCode || null })), primaryManufacturer: mfName, satellites: sats0, orbits: sats0.reduce((a, s) => ((a[s.orbit] = (a[s.orbit] || 0) + 1), a), {}), firstLaunch: sats0.map((s) => s.launched).filter(Boolean).sort()[0] || null, lastLaunch: sats0.map((s) => s.launched).filter(Boolean).sort().at(-1) || null });
+  }
   const [ws, newsR] = await settle([ext.wikiSearch(q), ext.news(name)]);
   let wikiRes = null;
   if (ws.ok && ws.v.length) {

@@ -71,3 +71,23 @@ export function startClock(el) {
 }
 
 export function qs(name) { return new URLSearchParams(location.search).get(name); }
+
+// ---------------------------------------------------------------------------
+// Data access. With a server, routes are fetched live; in the static (GitHub Pages) build,
+// window.STATIC_BASE points at JSON files produced by scripts/build-static.mjs.
+export const STATIC = typeof window !== 'undefined' && window.STATIC_BASE ? window.STATIC_BASE : null;
+export const slugFile = (s) => encodeURIComponent(s).replace(/%/g, '_');
+async function getJSONRaw(url) {
+  const r = await fetch(url);
+  if (!r.ok) { let msg = `HTTP ${r.status}`; try { msg = (await r.json()).error || msg; } catch {} throw new Error(msg); }
+  return r.json();
+}
+const STATIC_MAP = { '/api/satellites': 'satellites.json', '/api/rockets': 'rockets.json', '/api/makers': 'makers.json', '/api/owners': 'owners.json', '/api/buses': 'buses.json', '/api/untracked': 'untracked.json', '/api/insights/launches': 'insights-launches.json', '/api/launches/upcoming': 'launches-upcoming.json', '/api/launches/recent': 'launches-recent.json' };
+export async function apiGet(route) {
+  if (!STATIC) return getJSONRaw(route);
+  const m = route.match(/^\/api\/satellite\/(\d+)/);
+  if (m) { const id = +m[1]; const shard = await getJSONRaw(`${STATIC}details/${Math.floor(id / 1000)}.json`).catch(() => ({})); if (!shard[id]) throw new Error('not found'); return shard[id]; }
+  const file = STATIC_MAP[route];
+  if (!file) throw new Error(`no static equivalent for ${route}`);
+  return getJSONRaw(STATIC + file);
+}

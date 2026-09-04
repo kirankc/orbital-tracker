@@ -1,6 +1,27 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "orbital-tracker", "runtimeExecutable": "npm", "runtimeArgs": ["start"], "port": 3000, "autoPort": true }
+    {
+      "name": "orbital-tracker",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "start"
+      ],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "static-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8123",
+        "--directory",
+        "/private/tmp/claude-501/-Users-kiranc-Downloads-orbital-tracker/7e1ef807-eb6d-43c4-a350-1e0351666a5c/scratchpad/site"
+      ],
+      "port": 8123,
+      "autoPort": true
+    }
   ]
 }

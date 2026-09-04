@@ -1,5 +1,7 @@
 # Orbital Tracker
 
+**Live site:** https://kirankc.github.io/orbital-tracker/ — a static build rebuilt by GitHub Actions every 2 hours from CelesTrak, GCAT and Launch Library data.
+
 Real-time 3D tracker of every actively tracked LEO / MEO / GEO / HEO satellite, with defense-satellite
 filtering, per-satellite launch and manufacturing details, rocket / manufacturer / bus profile pages, and a
 worldwide upcoming-launch schedule.
@@ -26,6 +28,18 @@ second. Subsequent starts reuse the cache; orbital elements refresh every 2 hour
 | `insights.html` | Analytics: hero stats plus 14 interactive charts (payloads by country, orbit class, launch year, rockets, manufacturers, operators, military by country, constellations, LEO altitude histogram, inclination × altitude heatmap, fleet age, and GCAT launch history since 1957 by outcome, country and rocket family). Every bar/cell deep-links to the globe or a profile; a Hide Starlink toggle recomputes everything. |
 | `detail.html?type=untracked` | Active SATCAT payloads that cannot be plotted (classified, deep-space, no public elements) and why. |
 | `launches.html` | Upcoming launches worldwide (and a Recent view cross-referenced with the catalog so each launch lists the payloads now on the globe) with countdowns, local + UTC times, windows, status, provider, rocket (linked), pad and map, mission description, target orbit, customers, weather odds, attempt counts, updates, webcasts and info links, mission patches. Filter by provider, country, status, rocket, defense-related. |
+
+## Hosting on GitHub Pages
+
+`scripts/build-static.mjs` starts the server locally, crawls its API into `dist/data/*.json` (catalog, detail shards,
+launch schedule, insights series, and GCAT profile cores for every rocket, organisation and bus), copies the front end
+and vendored libraries, and writes `js/config.js` with `STATIC_BASE = 'data/'`. In that mode the pages read the JSON
+files instead of the API, and profile pages fetch Launch Library, Wikipedia, Wikidata and Spaceflight News directly
+from the browser (`public/js/enrich.js`). `.github/workflows/pages.yml` runs the build on every push and every 2 hours.
+
+```bash
+node scripts/build-static.mjs   # -> dist/
+```
 
 ## Data sources
 

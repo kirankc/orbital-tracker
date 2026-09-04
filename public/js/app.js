@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { gstime } from 'satellite.js';
-import { esc, ORBIT_COLORS, fmtDate, fmtNum, yearsSince, linkRocket, linkMaker, linkBus, startClock, qs } from './common.js';
+import { esc, ORBIT_COLORS, fmtDate, fmtNum, yearsSince, linkRocket, linkMaker, linkBus, startClock, qs, apiGet, STATIC } from './common.js';
 
 // ---------------------------------------------------------------------------
 // State
@@ -205,9 +205,7 @@ function initPoints() {
 // ---------------------------------------------------------------------------
 // Data
 async function load() {
-  const res = await fetch('/api/satellites');
-  if (!res.ok) throw new Error('catalog unavailable');
-  const data = await res.json();
+  const data = await apiGet('/api/satellites');
   state.sats = data.satellites;
   state.sats.forEach((s, i) => state.index.set(s.id, i));
   state.flags = new Uint8Array(state.sats.length).fill(1);
@@ -219,7 +217,7 @@ async function load() {
   $('n-geo').textContent = (st.byOrbit.GEO || 0).toLocaleString();
   $('n-heo').textContent = (st.byOrbit.HEO || 0).toLocaleString();
   $('n-mil').textContent = st.military.toLocaleString();
-  $('datapill').textContent = `CelesTrak GP · ${fmtDate(st.gpUpdated, { time: true })}${st.gpStale ? ' (cached)' : ''} · ${st.total.toLocaleString()} objects`;
+  $('datapill').textContent = `CelesTrak GP · ${fmtDate(st.gpUpdated, { time: true })}${st.gpStale ? ' (cached)' : ''} · ${st.total.toLocaleString()} objects${STATIC && window.BUILT_AT ? ` · built ${fmtDate(window.BUILT_AT, { time: true })}` : ''}`;
   const cv = st.coverage;
   if (cv) {
     $('coverage').innerHTML = `<strong>${cv.shownActivePayloads.toLocaleString()}</strong> of <strong>${cv.satcatActivePayloads.toLocaleString()}</strong> active payloads in the CelesTrak SATCAT have public orbital elements and are plotted. `
@@ -410,8 +408,7 @@ async function showDetail(i) {
   const el = $('detail');
   el.innerHTML = renderDetail(s, null);
   try {
-    const res = await fetch(`/api/satellite/${s.id}`);
-    const d = await res.json();
+    const d = await apiGet(`/api/satellite/${s.id}`);
     if (state.selected === i) el.innerHTML = renderDetail(s, d);
   } catch { /* keep basic info */ }
 }

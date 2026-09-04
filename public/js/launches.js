@@ -1,4 +1,4 @@
-import { esc, fmtDate, fmtDateLocal, fmtNum, countdown, rocketUrl, makerUrl, startClock, satUrl, ORBIT_COLORS } from './common.js';
+import { esc, fmtDate, fmtDateLocal, fmtNum, countdown, rocketUrl, makerUrl, startClock, satUrl, ORBIT_COLORS, apiGet } from './common.js';
 
 startClock(document.getElementById('clock'));
 const $ = (id) => document.getElementById(id);
@@ -163,9 +163,7 @@ async function loadView() {
   tileState.next7 = false; tileState.outcome = '';
   const url = new URL(location.href); if (view === 'recent') url.searchParams.set('view', 'recent'); else url.searchParams.delete('view'); history.replaceState(null, '', url);
   try {
-    const r = await fetch(view === 'recent' ? '/api/launches/recent' : '/api/launches/upcoming');
-    if (!r.ok) throw new Error((await r.json()).detail || 'unavailable');
-    const d = await r.json();
+    const d = await apiGet(view === 'recent' ? '/api/launches/recent' : '/api/launches/upcoming');
     launches = d.results.sort((a, b) => new Date(a.net) - new Date(b.net));
     $('src').textContent = `Launch Library${d.source === 'dev' ? ' (dev mirror)' : ''} · ${view === 'recent' ? `${launches.length} recent` : `${d.count} upcoming`} · fetched ${fmtDate(d.fetched, { time: true })}`;
     fill('f-provider', launches.map((l) => l.launch_service_provider?.name), 'All providers');

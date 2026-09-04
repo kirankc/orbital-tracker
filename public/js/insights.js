@@ -1,5 +1,5 @@
 // Insights page: aggregations over the live catalog + GCAT launch history, rendered as SVG charts.
-import { esc, fmtDate, fmtNum, startClock, rocketUrl, makerUrl, busUrl } from './common.js';
+import { esc, fmtDate, fmtNum, startClock, rocketUrl, makerUrl, busUrl, apiGet } from './common.js';
 
 startClock(document.getElementById('clock'));
 const $ = (id) => document.getElementById(id);
@@ -322,9 +322,8 @@ function attachLineTip(id, x, series, L) {
 // ---------------------------------------------------------------------------
 (async () => {
   try {
-    const [satsR, histR] = await Promise.all([fetch('/api/satellites'), fetch('/api/insights/launches')]);
-    const d = await satsR.json(); sats = d.satellites; stats = d.stats;
-    history = histR.ok ? await histR.json() : null;
+    const [d, hist] = await Promise.all([apiGet('/api/satellites'), apiGet('/api/insights/launches').catch(() => null)]);
+    sats = d.satellites; stats = d.stats; history = hist;
     $('src').textContent = `CelesTrak GP ${fmtDate(stats.gpUpdated, { time: true })} · GCAT launch list · ${fmtNum(sats.length)} objects`;
     build();
     $('hide-starlink').onchange = build;
